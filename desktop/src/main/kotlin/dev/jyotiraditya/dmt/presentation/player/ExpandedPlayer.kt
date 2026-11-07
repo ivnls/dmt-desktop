@@ -88,7 +88,10 @@ fun ExpandedPlayer(
     onQueue: () -> Unit,
 ) {
     val windowSize = windowDpSize()
-    val landscape = isLandscapeWindow()
+    // the side-by-side player puts a square cover next to a ~360dp controls column, so it
+    // needs a clearly wide window; near-square desktop screens (1280x1200...) get the
+    // stacked layout instead of a cover that pushes the controls off screen
+    val landscape = windowSize.width > windowSize.height * 1.45f
     var showLyrics by rememberSaveable { mutableStateOf(false) }
 
     Box(

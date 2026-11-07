@@ -1,6 +1,7 @@
 package dev.jyotiraditya.dmt.playback
 
 import dev.jyotiraditya.dmt.data.ffmpeg.Ffmpeg
+import dev.jyotiraditya.dmt.data.remote.jellyfin.JellyfinSession
 import org.bytedeco.ffmpeg.global.avutil
 import org.bytedeco.javacv.FFmpegFrameFilter
 import org.bytedeco.javacv.FFmpegFrameGrabber
@@ -11,6 +12,10 @@ import java.nio.ShortBuffer
 import javax.sound.sampled.SourceDataLine
 
 private const val CHUNK_FRAMES = 1024
+/** A write that makes no progress for this long means the output is gone, not slow. */
+private const val STALL_LIMIT_MS = 3_000L
+/** How far decoding may run ahead of what the device actually played. */
+private const val MAX_AHEAD_MS = 1_500L
 
 /** Why a track could not be played; becomes "playback error: <code>" on the player. */
 class PlaybackFailure(val code: String, val unsupported: Boolean = false) : Exception(code)
@@ -58,6 +63,9 @@ class PlaybackSession(
     @Volatile var finished = false
         private set
 
+    /** frames handed to the line since [framesAtBase] was taken */
+    @Volatile private var framesWritten: Long = 0
+
     val positionMs: Long
         get() {
             val l = line ?: return basePositionMs
@@ -101,9 +109,15 @@ class PlaybackSession(
         val grabber = FFmpegFrameGrabber(uri)
         grabber.sampleMode = FrameGrabber.SampleMode.SHORT
         grabber.audioChannels = OUT_CHANNELS
+        // Only the protocols this source needs. Without a whitelist a crafted file (playlist,
+        // concat list, hls) could make ffmpeg open other local files or reach out to the network.
+        grabber.setOption("protocol_whitelist", Ffmpeg.protocolsFor(uri))
         if (!local) {
             grabber.setOption("rw_timeout", "15000000")
             grabber.setOption("reconnect", "1")
+            JellyfinSession.headerFor(uri)?.let { (name, value) ->
+                grabber.setOption("headers", "$name: $value\r\n")
+            }
         }
         try {
             grabber.start()
@@ -139,6 +153,10 @@ class PlaybackSession(
             val (l, rate) = output.acquire(sourceRate)
             output.sourceRate = sourceRate
             line = l
+            // The line is shared: a previous session that was paused left it stop()ped. Writing
+            // into a stopped line returns without playing anything, which used to make the
+            // decoder race through the file and skip from track to track on its own.
+            if (playing) l.start()
             outRate = rate
             if (rate != sourceRate) grabber.sampleRate = rate
 
@@ -148,6 +166,7 @@ class PlaybackSession(
             durationMs = (clipEnd - clipStart).coerceAtLeast(0)
             if (clipStart > 0 && pendingSeekMs == null) pendingSeekMs = 0
             framesAtBase = l.longFramePosition
+            framesWritten = 0
             listener.onReady(this, durationMs)
 
             filter = buildFilter(rate, speed)
@@ -177,6 +196,7 @@ class PlaybackSession(
                     output.flush()
                     basePositionMs = clamped
                     framesAtBase = l.longFramePosition
+                    framesWritten = 0
                     filter?.let { runCatching { it.stop(); it.release() } }
                     filter = buildFilter(rate, speed)
                 }
@@ -206,6 +226,8 @@ class PlaybackSession(
                 listener.onEnded(this)
             }
         } catch (failure: PlaybackFailure) {
+            // a dead line must not be handed to the next track
+            if (failure.code.startsWith("audio_")) output.close()
             if (!stopped) listener.onFailed(this, failure)
         } catch (t: Throwable) {
             if (!stopped) {
@@ -232,6 +254,7 @@ class PlaybackSession(
                 if (stopped || pendingSeekMs != null) return
                 l.start()
             }
+            if (!l.isActive && !l.isRunning) l.start()
             val count = minOf(samples.remaining(), buffer.size / 2)
             var o = 0
             repeat(count) {
@@ -240,7 +263,45 @@ class PlaybackSession(
                 buffer[o++] = (s and 0xFF).toByte()
                 buffer[o++] = ((s shr 8) and 0xFF).toByte()
             }
-            l.write(buffer, 0, o)
+            writeFully(l, buffer, o)
+        }
+    }
+
+    /**
+     * SourceDataLine.write normally blocks until the device takes the data. When the device
+     * goes away (pipewire / pulse restart, bluetooth drop, alsa xrun) it can return at once
+     * with 0 bytes, and the decoder would then race through the file and "end" every track
+     * in a row. Insist on progress, and give up loudly instead.
+     */
+    private fun writeFully(l: SourceDataLine, buffer: ByteArray, length: Int) {
+        var offset = 0
+        var stalledSince = 0L
+        while (offset < length && !stopped) {
+            if (!l.isOpen) throw PlaybackFailure("audio_output_closed")
+            val n = l.write(buffer, offset, length - offset)
+            if (n > 0) {
+                offset += n
+                stalledSince = 0
+                continue
+            }
+            if (!playing || pendingSeekMs != null) return
+            val now = System.currentTimeMillis()
+            if (stalledSince == 0L) stalledSince = now
+            if (now - stalledSince > STALL_LIMIT_MS) throw PlaybackFailure("audio_output_stalled")
+            Thread.sleep(5)
+        }
+        framesWritten += length / OUT_BYTES_PER_FRAME
+        // never run more than a moment ahead of the device, whatever write() claims
+        val rate = outRate.takeIf { it > 0 } ?: return
+        var waitedSince = 0L
+        while (!stopped && playing && pendingSeekMs == null) {
+            val played = l.longFramePosition - framesAtBase
+            val aheadMs = (framesWritten - played) * 1000 / rate
+            if (aheadMs <= MAX_AHEAD_MS) break
+            val now = System.currentTimeMillis()
+            if (waitedSince == 0L) waitedSince = now
+            if (now - waitedSince > STALL_LIMIT_MS) throw PlaybackFailure("audio_output_stalled")
+            Thread.sleep(10)
         }
     }
 }

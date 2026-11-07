@@ -115,6 +115,14 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
             dispatch(DmtAction.Config(settings.copy(cols = nextCoverCols(settings.cols))))
         }
         SettingRow(
+            label = stringResource(Res.string.set_ui_scale),
+            value = if (settings.uiScale == 0) stringResource(Res.string.ui_scale_auto) else "${settings.uiScale}%",
+        ) {
+            val steps = listOf(0) + dev.jyotiraditya.dmt.presentation.player.UI_SCALE_STEPS
+            val next = steps[(steps.indexOf(settings.uiScale) + 1).mod(steps.size)]
+            dispatch(DmtAction.Config(settings.copy(uiScale = next)))
+        }
+        SettingRow(
             label = stringResource(Res.string.set_raw),
             value = if (settings.rawArt) on else off,
         ) {

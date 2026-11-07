@@ -24,6 +24,8 @@ import io.ktor.client.plugins.HttpTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import dev.jyotiraditya.dmt.data.remote.jellyfin.JellyfinSession
 
 /** Hand-wired replacement for the android app's hilt graph. */
 class AppGraph {
@@ -48,6 +50,12 @@ class AppGraph {
         jellyfin = JellyfinMediaRepositoryImpl(jellyfinApi, preferences),
         settingsRepository = preferences,
     )
+
+    init {
+        scope.launch {
+            preferences.settings.collect { JellyfinSession.set(it.jellyfinUrl, it.jellyfinToken) }
+        }
+    }
 
     val viewModel = PlayerViewModel(
         player = player,

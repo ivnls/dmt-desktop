@@ -51,12 +51,28 @@ object Ffmpeg {
         }.getOrDefault("?")
     }
 
+    /**
+     * protocol_whitelist for a source: local files may only use "file", http(s) streams only
+     * the transport they need. Never concat/subfile/data/pipe/udp/rtmp/... from a media file.
+     */
+    fun protocolsFor(uri: String): String = when {
+        uri.startsWith("https://", ignoreCase = true) -> "https,tls,tcp"
+        uri.startsWith("http://", ignoreCase = true) -> "http,tcp"
+        else -> "file"
+    }
+
+    /** Probes a local file (only the "file" protocol is allowed). */
     fun probe(path: String, withPicture: Boolean = false, deep: Boolean = true): Probe? {
         if (!ensureLoaded()) return null
+        if (path.contains("://")) return null
         val ctx = AVFormatContext(null)
         val url = BytePointer(path, "UTF-8")
+        val options = AVDictionary(null)
+        avutil.av_dict_set(options, "protocol_whitelist", "file", 0)
         try {
-            if (avformat.avformat_open_input(ctx, url, null, null) < 0) return null
+            val opened = avformat.avformat_open_input(ctx, url, null, options)
+            avutil.av_dict_free(options)
+            if (opened < 0) return null
             try {
                 if (deep || ctx.duration() <= 0) {
                     avformat.avformat_find_stream_info(ctx, null as PointerPointer<*>?)

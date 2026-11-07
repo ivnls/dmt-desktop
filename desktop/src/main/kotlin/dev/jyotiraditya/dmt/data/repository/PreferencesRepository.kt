@@ -27,6 +27,7 @@ import dev.jyotiraditya.dmt.data.source.local.KEY_STOP_ON_DISMISS
 import dev.jyotiraditya.dmt.data.source.local.KEY_VOLUME
 import dev.jyotiraditya.dmt.data.source.local.KEY_WAVE
 import dev.jyotiraditya.dmt.data.source.local.KEY_WINDOW
+import dev.jyotiraditya.dmt.data.source.local.KEY_UI_SCALE
 import dev.jyotiraditya.dmt.data.source.local.encodeCounts
 import dev.jyotiraditya.dmt.data.source.local.toCounts
 import dev.jyotiraditya.dmt.domain.model.DmtSettings
@@ -36,16 +37,67 @@ import dev.jyotiraditya.dmt.domain.model.LibrarySort
 import dev.jyotiraditya.dmt.domain.model.SourceMode
 import dev.jyotiraditya.dmt.platform.AppDirs
 import dev.jyotiraditya.dmt.platform.normalPath
+import dev.jyotiraditya.dmt.platform.secrets.SecretStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private const val COUNTED_LISTEN_MS = 30_000L
 
-class PreferencesRepository(private val store: DmtStore = DmtStore()) {
+private const val SECRET_JELLYFIN_TOKEN = "jellyfin_token"
 
-    val settings: Flow<DmtSettings> = store.data.map { prefs ->
+class PreferencesRepository(
+    private val store: DmtStore = DmtStore(),
+    secretStoreFactory: () -> SecretStore = SecretStore::create,
+) {
+
+    private val secrets: SecretStore by lazy(secretStoreFactory)
+
+    /** The jellyfin token, kept in the os keyring; null until loaded (see [loadToken]). */
+    private val token = MutableStateFlow<TokenState>(TokenState.Loading)
+
+    private sealed interface TokenState {
+        data object Loading : TokenState
+        data class Ready(val value: String?) : TokenState
+    }
+
+    init {
+        Thread(::loadToken, "dmt-secrets").apply { isDaemon = true }.start()
+    }
+
+    /**
+     * Reads the token from the keyring, moving a plain-text token left in dmt.properties by
+     * older builds into the keyring first. Only touches the keyring when jellyfin is configured,
+     * so a local-only setup never triggers an unlock prompt.
+     */
+    private fun loadToken() {
+        val prefs = store.data.value
+        val legacy = prefs[KEY_JELLYFIN_TOKEN]
+        val value = runCatching {
+            when {
+                legacy != null -> {
+                    secrets.put(SECRET_JELLYFIN_TOKEN, legacy)
+                    kotlinx.coroutines.runBlocking { store.edit { it.remove(KEY_JELLYFIN_TOKEN) } }
+                    legacy
+                }
+
+                prefs[KEY_JELLYFIN_URL] != null -> secrets.get(SECRET_JELLYFIN_TOKEN)
+                else -> null
+            }
+        }.getOrNull()
+        token.value = TokenState.Ready(value)
+    }
+
+    val settings: Flow<DmtSettings> = combine(
+        store.data,
+        token.filterIsInstance<TokenState.Ready>(),
+    ) { prefs, tokenState ->
         DmtSettings(
             wave = prefs[KEY_WAVE] ?: true,
             normalizeVolume = prefs[KEY_NORMALIZE] ?: false,
@@ -55,6 +107,7 @@ class PreferencesRepository(private val store: DmtStore = DmtStore()) {
             rawArt = prefs[KEY_RAW] ?: false,
             lyricsFromFile = prefs[KEY_LYRICS_FROM_FILE] ?: false,
             stopOnDismiss = prefs[KEY_STOP_ON_DISMISS] ?: false,
+            uiScale = prefs[KEY_UI_SCALE] ?: 0,
             setupDone = prefs[KEY_SETUP_DONE] ?: false,
             blockedFolders = prefs[KEY_BLOCKED_FOLDERS]?.toSet() ?: emptySet(),
             musicFolders = prefs[KEY_MUSIC_FOLDERS]
@@ -63,7 +116,7 @@ class PreferencesRepository(private val store: DmtStore = DmtStore()) {
             librarySort = LibrarySort.entries[(prefs[KEY_LIBRARY_SORT] ?: 0).mod(LibrarySort.entries.size)],
             jellyfinUrl = prefs[KEY_JELLYFIN_URL],
             jellyfinUserId = prefs[KEY_JELLYFIN_USER_ID],
-            jellyfinToken = prefs[KEY_JELLYFIN_TOKEN],
+            jellyfinToken = tokenState.value,
         )
     }.distinctUntilChanged()
 
@@ -80,6 +133,7 @@ class PreferencesRepository(private val store: DmtStore = DmtStore()) {
             it[KEY_RAW] = settings.rawArt
             it[KEY_LYRICS_FROM_FILE] = settings.lyricsFromFile
             it[KEY_STOP_ON_DISMISS] = settings.stopOnDismiss
+            it[KEY_UI_SCALE] = settings.uiScale
             it[KEY_SETUP_DONE] = settings.setupDone
             it[KEY_BLOCKED_FOLDERS] = settings.blockedFolders.sorted()
             it[KEY_MUSIC_FOLDERS] = settings.musicFolders
@@ -87,9 +141,22 @@ class PreferencesRepository(private val store: DmtStore = DmtStore()) {
             it[KEY_LIBRARY_SORT] = settings.librarySort.ordinal
             settings.jellyfinUrl?.let { url -> it[KEY_JELLYFIN_URL] = url } ?: it.remove(KEY_JELLYFIN_URL)
             settings.jellyfinUserId?.let { id -> it[KEY_JELLYFIN_USER_ID] = id } ?: it.remove(KEY_JELLYFIN_USER_ID)
-            settings.jellyfinToken?.let { t -> it[KEY_JELLYFIN_TOKEN] = t } ?: it.remove(KEY_JELLYFIN_TOKEN)
+            it.remove(KEY_JELLYFIN_TOKEN)
+        }
+        val current = (token.value as? TokenState.Ready)?.value
+        if (settings.jellyfinToken != current) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val t = settings.jellyfinToken
+                    if (t == null) secrets.delete(SECRET_JELLYFIN_TOKEN) else secrets.put(SECRET_JELLYFIN_TOKEN, t)
+                }
+            }
+            token.value = TokenState.Ready(settings.jellyfinToken)
         }
     }
+
+    /** Which store holds credentials, for the sources page. */
+    val secretStoreName: String get() = runCatching { secrets.name }.getOrDefault("file")
 
     fun savedSpeed(): Float = store.data.value[KEY_SPEED] ?: 1f
 

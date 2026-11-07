@@ -45,7 +45,30 @@ every package bundles its own java runtime, ffmpeg and skia: nothing else to ins
 
 `space` play/pause · `←/→` seek 5s (`shift` 30s) · `ctrl+←/→` or `p`/`n` previous/next ·
 `s` shuffle · `r` repeat · `f`/`enter` full player · `+`/`-` volume · `1`–`5` library tabs ·
-`/` search · `h` home · `ctrl+,` config · `esc` back · media keys
+`/` search · `h` home · `ctrl+,` config · `ctrl` `+`/`-`/`0` interface size · `esc` back · media keys
+
+### interface size
+
+cfg → display → interface size. `auto` follows the desktop's scale (also fractional scaling on
+gnome / kde, which java alone ignores) and grows with tall windows, so a maximised window on a
+big screen is not a phone ui floating in empty space. fixed sizes from 75% to 200% are there
+too, and `ctrl +`/`ctrl -`/`ctrl 0` change it on the fly.
+
+### security
+
+- **jellyfin over http**: the server address defaults to `https://`. plain `http://` is refused
+  for servers outside your network, and on your local network (192.168.x, 10.x, `*.local`,
+  tailscale...) it needs a second, explicit press after a warning.
+- **token**: never written to `dmt.properties`. it goes to the desktop keyring (Secret Service:
+  gnome keyring, kwallet, keepassxc) on linux and is encrypted with DPAPI for your user on
+  windows. without a keyring it falls back to a `secrets` file readable only by you (0600).
+  tokens saved by older builds are moved there on first start. the config folder and
+  `dmt.properties` are owner-only too.
+- **token in urls**: stream and cover requests send the token as an `X-Emby-Token` header, only
+  to the server it belongs to, instead of `?api_key=` in the url.
+- **ffmpeg**: every input gets a `protocol_whitelist`: local files may only use `file`, streams
+  only `https,tls,tcp` (or `http,tcp` for a local http server). a crafted media file can't make
+  ffmpeg open other files (concat, subfile, hls) or reach the network.
 
 ### where things live
 
@@ -62,7 +85,7 @@ than older distros have, so for release packages point `dmt.javaHome` at a porta
 [temurin](https://adoptium.net) jdk.
 
 ```bash
-./gradlew test                                   # 68 tests (metadata, lyrics, desktop)
+./gradlew test                                   # 75 tests (metadata, lyrics, desktop)
 ./gradlew :desktop:run                           # run from source
 ./gradlew :desktop:linuxPackages -Pdmt.javaHome=/path/to/temurin-21   # .deb .rpm .tar.gz → desktop/build/dist
 ./gradlew :desktop:packageReleaseMsi :desktop:packageReleaseExe      # on windows

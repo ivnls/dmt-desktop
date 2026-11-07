@@ -164,7 +164,7 @@
     <string name="source_logout">log out</string>
     <string name="source_login_title">connect to %1$s</string>
     <string name="source_url_label">server</string>
-    <string name="source_url_hint" translatable="false">http://192.168.1.10:8096</string>
+    <string name="source_url_hint" translatable="false">https://jellyfin.example.com</string>
     <string name="source_user_label">user</string>
     <string name="source_user_hint">username</string>
     <string name="source_pass_label">pass</string>
@@ -172,6 +172,9 @@
     <string name="source_login_cancel">esc</string>
     <string name="source_connect">connect</string>
     <string name="source_login_failed">could not connect - check url and credentials</string>
+    <string name="source_url_invalid">server must be an http(s) address, e.g. https://jellyfin.example.com</string>
+    <string name="source_http_public">plain http is only allowed on your local network - use https for this server</string>
+    <string name="source_http_local">http is not encrypted: your password and token cross the network in clear text. press connect again to continue anyway, or use https</string>
     <string name="source_login_missing">fill server and user first</string>
     <string name="on">on</string>
     <string name="off">off</string>
@@ -235,6 +238,8 @@
     <string name="tray_next">next</string>
     <string name="tray_prev">previous</string>
     <string name="tray_quit">quit</string>
+    <string name="set_ui_scale">interface size</string>
+    <string name="ui_scale_auto">auto</string>
     <string name="set_keys">keyboard</string>
-    <string name="set_keys_value">space play · ←/→ seek · n/p track · 1-5 tabs · / search · esc back</string>
+    <string name="set_keys_value">space play · ←/→ seek · n/p track · 1-5 tabs · / search · esc back · ctrl +/-/0 zoom</string>
 </resources>

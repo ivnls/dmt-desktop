@@ -58,7 +58,10 @@ class CoverArtRepository(private val client: HttpClient) {
             decode(runCatching { file.readBytes() }.getOrNull())?.let { return it }
         }
         val bytes = runCatching {
-            val response = client.get(url)
+            val response = client.get(url) {
+                dev.jyotiraditya.dmt.data.remote.jellyfin.JellyfinSession.headerFor(url)
+                    ?.let { (name, value) -> headers.append(name, value) }
+            }
             if (response.status.isSuccess()) response.readRawBytes() else null
         }.getOrNull() ?: return null
         val image = decode(bytes) ?: return null

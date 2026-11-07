@@ -1,6 +1,8 @@
 package dev.jyotiraditya.dmt.data.source.local
 
 import dev.jyotiraditya.dmt.platform.AppDirs
+import dev.jyotiraditya.dmt.platform.secrets.restrictDir
+import dev.jyotiraditya.dmt.platform.secrets.restrictFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +44,11 @@ class DmtStore(private val file: File = File(AppDirs.config, "dmt.properties")) 
     private fun persist(prefs: Prefs) {
         runCatching {
             file.parentFile?.mkdirs()
+            restrictDir(file.parentFile)
             val tmp = File(file.parentFile, file.name + ".tmp")
+            tmp.delete()
+            tmp.createNewFile()
+            restrictFile(tmp)
             val props = Properties().apply { prefs.values.forEach { (k, v) -> setProperty(k, v) } }
             tmp.outputStream().use { props.store(it, "dmt") }
             Files.move(
@@ -51,6 +57,7 @@ class DmtStore(private val file: File = File(AppDirs.config, "dmt.properties")) 
                 StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE,
             )
+            restrictFile(file)
         }.onFailure {
             runCatching {
                 val props = Properties().apply { prefs.values.forEach { (k, v) -> setProperty(k, v) } }
@@ -136,6 +143,7 @@ val KEY_JELLYFIN_URL = StringKey("jellyfin_url")
 val KEY_JELLYFIN_USER_ID = StringKey("jellyfin_user_id")
 val KEY_JELLYFIN_TOKEN = StringKey("jellyfin_token")
 val KEY_WINDOW = StringKey("window")
+val KEY_UI_SCALE = IntKey("ui_scale")
 
 fun String.toCounts(): Map<Long, Int> =
     split(';')

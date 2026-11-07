@@ -21,6 +21,8 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ApplicationScope
@@ -41,6 +43,7 @@ import dev.jyotiraditya.dmt.core.common.UiCommand
 import dev.jyotiraditya.dmt.core.common.UiCommands
 import dev.jyotiraditya.dmt.platform.Mpris
 import dev.jyotiraditya.dmt.platform.Platform
+import dev.jyotiraditya.dmt.platform.uiZoom
 import dev.jyotiraditya.dmt.presentation.main.DmtScreen
 import dev.jyotiraditya.dmt.presentation.main.SetupScreen
 import dev.jyotiraditya.dmt.presentation.player.DmtAction
@@ -155,8 +158,11 @@ fun main() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val base = LocalDensity.current
+                        val zoom = uiZoom(state.settings.uiScale, maxHeight.value)
                         CompositionLocalProvider(
-                            LocalWindowDpSize provides DpSize(maxWidth, maxHeight),
+                            LocalDensity provides Density(base.density * zoom, base.fontScale),
+                            LocalWindowDpSize provides DpSize(maxWidth / zoom, maxHeight / zoom),
                             LocalBackDispatcher provides backDispatcher,
                             LocalUiCommands provides uiCommands,
                         ) {
@@ -207,8 +213,9 @@ private fun handleShortcut(
         Key.S -> dispatch(DmtAction.ToggleShuffle)
         Key.R -> dispatch(DmtAction.CycleRepeat)
         Key.F, Key.Enter -> dispatch(DmtAction.Expand(!expanded))
-        Key.Plus, Key.Equals, Key.NumPadAdd -> dispatch(DmtAction.Volume(0.05f))
-        Key.Minus, Key.NumPadSubtract -> dispatch(DmtAction.Volume(-0.05f))
+        Key.Plus, Key.Equals, Key.NumPadAdd -> dispatch(if (ctrl) DmtAction.Zoom(1) else DmtAction.Volume(0.05f))
+        Key.Minus, Key.NumPadSubtract -> dispatch(if (ctrl) DmtAction.Zoom(-1) else DmtAction.Volume(-0.05f))
+        Key.Zero, Key.NumPad0 -> if (ctrl) dispatch(DmtAction.Zoom(0)) else return false
         Key.Slash -> ui.send(UiCommand.Search)
         Key.H -> ui.send(UiCommand.Home)
         Key.One -> ui.send(UiCommand.Library(DmtView.LIBRARY))

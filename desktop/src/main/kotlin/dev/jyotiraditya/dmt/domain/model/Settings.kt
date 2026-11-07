@@ -40,6 +40,8 @@ data class DmtSettings(
     val rawArt: Boolean = false,
     val lyricsFromFile: Boolean = false,
     val stopOnDismiss: Boolean = false,
+    /** 0 = auto (system scale + window size), otherwise a fixed percentage */
+    val uiScale: Int = 0,
     val setupDone: Boolean = false,
     val blockedFolders: Set<String> = emptySet(),
     val musicFolders: List<String> = emptyList(),

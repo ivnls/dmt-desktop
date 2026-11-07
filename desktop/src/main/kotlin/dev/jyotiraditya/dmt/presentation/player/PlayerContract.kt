@@ -98,6 +98,8 @@ sealed interface DmtAction {
     data object OpenEqualizer : DmtAction
     data class SeekBy(val deltaMs: Long) : DmtAction
     data class Volume(val delta: Float) : DmtAction
+    /** +1 bigger, -1 smaller, 0 back to auto */
+    data class Zoom(val step: Int) : DmtAction
     data class Config(val settings: DmtSettings) : DmtAction
     data class ShowLogin(val mode: SourceMode) : DmtAction
     data class SourceLogin(

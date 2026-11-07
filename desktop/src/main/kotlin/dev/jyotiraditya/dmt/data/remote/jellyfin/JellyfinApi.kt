@@ -80,11 +80,12 @@ class JellyfinApi(
         }
     }
 
-    fun streamUrl(baseUrl: String, itemId: String, token: String): String =
-        endpoint(baseUrl, "/Audio/$itemId/stream?static=true&api_key=$token")
+    /** no token in the url: [JellyfinSession] adds it as a header when the stream is opened */
+    fun streamUrl(baseUrl: String, itemId: String): String =
+        endpoint(baseUrl, "/Audio/$itemId/stream?static=true")
 
-    fun imageUrl(baseUrl: String, itemId: String, token: String): String =
-        endpoint(baseUrl, "/Items/$itemId/Images/Primary?api_key=$token")
+    fun imageUrl(baseUrl: String, itemId: String): String =
+        endpoint(baseUrl, "/Items/$itemId/Images/Primary")
 
     suspend fun fetchLyrics(baseUrl: String, itemId: String, token: String): Lyrics? {
         val json = runCatching {

@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.json)
     implementation(libs.dbus.core)
     implementation(libs.dbus.unixsocket)
+    implementation(libs.jna.platform)
 
     // ffmpeg (decoding + resampling + atempo) through javacv / javacpp
     implementation(libs.javacv) {

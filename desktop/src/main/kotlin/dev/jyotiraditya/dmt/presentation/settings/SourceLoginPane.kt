@@ -38,6 +38,9 @@ import dev.jyotiraditya.dmt.ui.theme.TuiDim
 import dev.jyotiraditya.dmt.ui.theme.TuiFg
 import dev.jyotiraditya.dmt.ui.theme.TuiLine
 import dev.jyotiraditya.dmt.core.common.trackTextFocus
+import dev.jyotiraditya.dmt.data.remote.jellyfin.ServerUrlProblem
+import dev.jyotiraditya.dmt.data.remote.jellyfin.ServerUrls
+import dev.jyotiraditya.dmt.ui.theme.TuiRed
 
 @Composable
 fun SourceLoginPane(mode: SourceMode, dispatch: (DmtAction) -> Unit) {
@@ -45,16 +48,27 @@ fun SourceLoginPane(mode: SourceMode, dispatch: (DmtAction) -> Unit) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showMissing by remember { mutableStateOf(false) }
+    var problem by remember { mutableStateOf<StringResource?>(null) }
+    // plain http is only accepted on the local network, and only after a second, explicit press
+    var httpConfirmedFor by remember { mutableStateOf<String?>(null) }
 
-    val submitLogin = {
-        dispatch(DmtAction.SourceLogin(mode, url.trim(), username.trim(), password))
-    }
     val connect = {
-        if (url.isBlank() || username.isBlank()) {
-            showMissing = true
-        } else {
-            showMissing = false
-            submitLogin()
+        val server = ServerUrls.normalize(url)
+        problem = null
+        when {
+            url.isBlank() || username.isBlank() -> showMissing = true
+            ServerUrls.problem(server) == ServerUrlProblem.INVALID -> problem = Res.string.source_url_invalid
+            ServerUrls.problem(server) == ServerUrlProblem.INSECURE_PUBLIC -> problem = Res.string.source_http_public
+            ServerUrls.isPlainHttp(server) && httpConfirmedFor != server -> {
+                showMissing = false
+                httpConfirmedFor = server
+                problem = Res.string.source_http_local
+            }
+
+            else -> {
+                showMissing = false
+                dispatch(DmtAction.SourceLogin(mode, server, username.trim(), password))
+            }
         }
     }
 
@@ -65,7 +79,11 @@ fun SourceLoginPane(mode: SourceMode, dispatch: (DmtAction) -> Unit) {
             label = stringResource(Res.string.source_url_label),
             value = url,
             hint = stringResource(Res.string.source_url_hint),
-            onValueChange = { url = it },
+            onValueChange = {
+                url = it
+                httpConfirmedFor = null
+                problem = null
+            },
         )
         LoginField(
             label = stringResource(Res.string.source_user_label),
@@ -92,6 +110,15 @@ fun SourceLoginPane(mode: SourceMode, dispatch: (DmtAction) -> Unit) {
                 label = "[ ${stringResource(Res.string.source_connect)} ]",
                 bright = true,
                 onClick = connect,
+            )
+        }
+
+        problem?.let {
+            Text(
+                text = stringResource(it),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (it == Res.string.source_http_local) TuiAccent else TuiRed,
+                modifier = Modifier.padding(top = 10.dp),
             )
         }
 

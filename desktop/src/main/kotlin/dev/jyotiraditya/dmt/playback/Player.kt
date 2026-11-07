@@ -25,6 +25,11 @@ object RepeatMode {
 
 private const val RESTART_THRESHOLD_MS = 3_000L
 private const val MIN_STAT_MS = 5_000L
+/** A track that "ends" this fast while it is longer than this... */
+private const val SUSPICIOUS_END_MS = 2_000L
+private const val SUSPICIOUS_TRACK_MS = 5_000L
+/** ...this many times in a row means the decoder is not really playing anything: stop. */
+private const val MAX_SUSPICIOUS_ENDS = 2
 
 interface PlayerListener {
     fun onMediaItemTransition(track: Track?) {}
@@ -113,6 +118,8 @@ class Player(
     private var sleepJob: Job? = null
 
     private var playedMs = 0L
+    private var sessionStartedAt = 0L
+    private var suspiciousEnds = 0
     private var lastTick = 0L
 
     val currentTrack: Track?
@@ -356,6 +363,7 @@ class Player(
             previous = old,
         )
         session = s
+        sessionStartedAt = System.currentTimeMillis()
         output.effects = effectsList()
         s.start()
         applyReplayGain()
@@ -378,6 +386,21 @@ class Player(
             scope.launch(Dispatchers.Main) {
                 if (session !== this@Player.session) return@launch
                 recordStats()
+                val wall = System.currentTimeMillis() - sessionStartedAt
+                val expected = (session.durationMs.takeIf { it > 0 } ?: duration) - pausedPositionMs
+                suspiciousEnds = if (wall < SUSPICIOUS_END_MS && expected > SUSPICIOUS_TRACK_MS) suspiciousEnds + 1 else 0
+                if (suspiciousEnds >= MAX_SUSPICIOUS_ENDS) {
+                    // tracks are "ending" without being heard: the output is broken. Stop here
+                    // rather than skipping through the whole queue.
+                    suspiciousEnds = 0
+                    playWhenReady = false
+                    pausedPositionMs = 0
+                    this@Player.session = null
+                    output.close()
+                    setPlayingState(false)
+                    listeners.forEach { it.onPlayerError("audio_output_stalled") }
+                    return@launch
+                }
                 val next = nextIndex(forNavigation = false)
                 if (next == null) {
                     ended = true

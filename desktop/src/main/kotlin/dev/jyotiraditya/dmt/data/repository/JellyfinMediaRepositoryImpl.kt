@@ -22,6 +22,7 @@ class JellyfinMediaRepositoryImpl(
         val url = settings.jellyfinUrl ?: return emptyList()
         val userId = settings.jellyfinUserId ?: return emptyList()
         val token = settings.jellyfinToken ?: return emptyList()
+        dev.jyotiraditya.dmt.data.remote.jellyfin.JellyfinSession.set(url, token)
 
         return api.fetchAudioItems(url, userId, token).map { item ->
             item.toTrack(url, token)
@@ -33,7 +34,7 @@ class JellyfinMediaRepositoryImpl(
 
         return Track(
             id = id.toJellyfinLong(),
-            uri = api.streamUrl(baseUrl, id, token),
+            uri = api.streamUrl(baseUrl, id),
             title = title,
             artist = artist,
             albumArtist = albumArtist,
@@ -46,7 +47,7 @@ class JellyfinMediaRepositoryImpl(
             trackNumber = trackNumber,
             dateAdded = dateAdded,
             dateModified = dateAdded,
-            coverUri = artId?.let { api.imageUrl(baseUrl, it, token) },
+            coverUri = artId?.let { api.imageUrl(baseUrl, it) },
             source = TrackSource.JELLYFIN,
             remoteId = id,
         )

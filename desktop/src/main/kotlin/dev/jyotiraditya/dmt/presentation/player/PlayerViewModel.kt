@@ -42,6 +42,15 @@ import kotlin.time.Duration.Companion.seconds
 
 private val SPEED_STEPS = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 private val SLEEP_STEPS = listOf(0, 15, 30, 60)
+val UI_SCALE_STEPS = listOf(75, 90, 100, 110, 125, 150, 175, 200)
+
+/** step +1/-1 through [UI_SCALE_STEPS] (auto counts as 100%), 0 = back to auto */
+fun nextUiScale(current: Int, step: Int): Int {
+    if (step == 0) return 0
+    val from = if (current == 0) 100 else current
+    val index = UI_SCALE_STEPS.indexOfFirst { it >= from }.let { if (it < 0) UI_SCALE_STEPS.lastIndex else it }
+    return UI_SCALE_STEPS[(index + step).coerceIn(0, UI_SCALE_STEPS.lastIndex)]
+}
 private const val HOME_ART_COLS = 48
 private const val HOME_ART_CACHE_ENTRIES = 256
 
@@ -252,6 +261,13 @@ class PlayerViewModel(
                 if (intent.index in 0 until mediaItemCount) removeMediaItem(intent.index)
             }
 
+            is DmtAction.Zoom -> {
+                val settings = currentState.settings
+                val next = nextUiScale(settings.uiScale, intent.step)
+                onIntent(DmtAction.Config(settings.copy(uiScale = next)))
+                notify(if (next == 0) "zoom auto" else "zoom $next%")
+            }
+
             DmtAction.FetchLyrics -> fetchOnlineLyrics()
             DmtAction.CycleSleep -> cycleSleep()
             DmtAction.CycleSpeed -> cycleSpeed()
@@ -395,7 +411,7 @@ class PlayerViewModel(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            reduce { it.copy(isPlaying = isPlaying) }
+            reduce { if (isPlaying) it.copy(isPlaying = true, fault = null) else it.copy(isPlaying = false) }
         }
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
