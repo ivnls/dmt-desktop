@@ -7,6 +7,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.readRawBytes
 import io.ktor.http.isSuccess
+import dev.jyotiraditya.dmt.core.common.squareCover
 import org.jetbrains.skia.Image
 import java.io.File
 import java.security.MessageDigest
@@ -20,7 +21,10 @@ class CoverArtRepository(private val client: HttpClient) {
 
     private val diskDir = File(AppDirs.cache, "cover_art").apply { mkdirs() }
 
-    suspend fun loadArt(track: Track): Image? {
+    /** The track's cover, trimmed of flat bars and cropped square (see squareCover). */
+    suspend fun loadArt(track: Track): Image? = loadOriginal(track)?.let { runCatching { it.squareCover() }.getOrDefault(it) }
+
+    private suspend fun loadOriginal(track: Track): Image? {
         val remote = track.coverUri
         return if (remote != null && (remote.startsWith("http://") || remote.startsWith("https://"))) {
             loadRemote(remote)
