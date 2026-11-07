@@ -1,5 +1,7 @@
 package dev.jyotiraditya.dmt.presentation.player
 
+import androidx.compose.foundation.layout.height
+import dev.jyotiraditya.dmt.core.common.AudioBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,6 +67,13 @@ fun MiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            AudioBars(
+                playing = state.isPlaying,
+                modifier = Modifier
+                    .weight(1.1f)
+                    .height(34.dp)
+                    .padding(end = 14.dp),
+            )
             Text(
                 text = "^",
                 style = MaterialTheme.typography.labelMedium,

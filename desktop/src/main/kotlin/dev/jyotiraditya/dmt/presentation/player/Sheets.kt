@@ -56,6 +56,8 @@ private const val CHAIN_LABEL_WIDTH = 8
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TuiSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    // registered after the player's own handler, so esc closes the sheet first
+    dev.jyotiraditya.dmt.core.common.BackHandler(onBack = onDismiss)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = TuiBg,

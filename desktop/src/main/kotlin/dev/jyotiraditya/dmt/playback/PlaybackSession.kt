@@ -274,6 +274,8 @@ class PlaybackSession(
      * in a row. Insist on progress, and give up loudly instead.
      */
     private fun writeFully(l: SourceDataLine, buffer: ByteArray, length: Int) {
+        // tag the chunk with the line position where it will be heard
+        output.spectrum.feed(buffer, length, framesAtBase + framesWritten, outRate)
         var offset = 0
         var stalledSince = 0L
         while (offset < length && !stopped) {

@@ -1,5 +1,6 @@
 package dev.jyotiraditya.dmt.core.common
 
+import androidx.compose.foundation.layout.offset
 import org.jetbrains.skia.Font as SkFont
 import org.jetbrains.skia.FontMgr
 import org.jetbrains.skia.FontStyle as SkFontStyle
@@ -230,13 +231,12 @@ fun TuiKey(
     val pressText = if (bright) TuiFg else TuiBg
     val pressBorder = if (bright) TuiLine else TuiFg
     val pressBg = if (bright) TuiRaised else TuiFg
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge,
-        color = lerp(restText, pressText, press.fraction),
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        softWrap = false,
+    val style = MaterialTheme.typography.labelLarge
+    // Skia leaves trailing spaces out when centring, and tracking adds space after the last
+    // glyph: centre the trimmed label in a box and nudge it by half the tracking instead.
+    val tracking = with(LocalDensity.current) { style.letterSpacing.toDp() }
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .border(1.dp, lerp(restBorder, pressBorder, press.fraction))
             .background(lerp(restBg, pressBg, press.fraction))
@@ -254,7 +254,17 @@ fun TuiKey(
                 },
                 vertical = if (big) 15.dp else 11.dp,
             ),
-    )
+    ) {
+        Text(
+            text = label.trim(),
+            style = style,
+            color = lerp(restText, pressText, press.fraction),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.offset(x = tracking / 2),
+        )
+    }
 }
 
 @Composable

@@ -41,7 +41,7 @@ class AppGraph {
     val preferences = PreferencesRepository()
     private val jellyfinApi = JellyfinApi(httpClient)
     private val lrclibApi = LrclibApi(httpClient)
-    private val output = AudioOutput()
+    val output = AudioOutput()
 
     val player = Player(scope, output, preferences)
 

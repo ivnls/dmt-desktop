@@ -1,5 +1,7 @@
 package dev.jyotiraditya.dmt.presentation.player
 
+import androidx.compose.runtime.SideEffect
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -224,10 +226,12 @@ private fun LandscapePlayer(
                 .weight(1f)
                 .fillMaxHeight(),
         ) {
+            var queueShown by remember { mutableStateOf(false) }
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 // tall windows (big desktop screens) have room under the controls: show the
                 // queue right there instead of leaving the column half empty
                 val roomy = maxHeight > 560.dp && state.queue.size > 1
+                SideEffect { queueShown = roomy }
                 Column(modifier = Modifier.fillMaxSize().padding(top = 12.dp)) {
                     Column(
                         modifier = if (roomy) {
@@ -261,7 +265,8 @@ private fun LandscapePlayer(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            QueueFooter(state, onQueue)
+            // the queue is already listed above: the footer is just a summary then
+            QueueFooter(state, if (queueShown) null else onQueue)
         }
     }
 }
@@ -575,9 +580,10 @@ private fun TransportRow(state: DmtState, dispatch: (DmtAction) -> Unit) {
             dispatch(DmtAction.Prev)
         }
         TuiKey(
-            label = if (state.isPlaying) "  ||  " else "  |>  ",
+            label = if (state.isPlaying) "||" else "|>",
             bright = true,
             big = true,
+            modifier = Modifier.widthIn(min = 96.dp),
         ) {
             dispatch(DmtAction.TogglePlay)
         }
@@ -670,7 +676,7 @@ private fun StatusRow(
 }
 
 @Composable
-private fun QueueFooter(state: DmtState, onQueue: () -> Unit) {
+private fun QueueFooter(state: DmtState, onQueue: (() -> Unit)?) {
     val next = state.queue.getOrNull(state.queuePosition + 1)
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -678,7 +684,7 @@ private fun QueueFooter(state: DmtState, onQueue: () -> Unit) {
             .fillMaxWidth()
             .border(1.dp, TuiLine)
             .background(TuiRaised)
-            .tuiClickable(onQueue)
+            .let { if (onQueue != null) it.tuiClickable(onQueue) else it }
             .padding(horizontal = 12.dp, vertical = 11.dp),
     ) {
         Text(

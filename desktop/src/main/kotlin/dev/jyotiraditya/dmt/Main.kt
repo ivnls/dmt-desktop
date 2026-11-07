@@ -37,6 +37,7 @@ import androidx.compose.ui.window.rememberWindowState
 import dev.jyotiraditya.dmt.core.common.BackDispatcher
 import dev.jyotiraditya.dmt.core.common.LocalBackDispatcher
 import dev.jyotiraditya.dmt.core.common.LocalUiCommands
+import dev.jyotiraditya.dmt.core.common.LocalSpectrum
 import dev.jyotiraditya.dmt.core.common.LocalWindowDpSize
 import dev.jyotiraditya.dmt.core.common.TextFocus
 import dev.jyotiraditya.dmt.core.common.UiCommand
@@ -165,6 +166,7 @@ fun main() {
                             LocalWindowDpSize provides DpSize(maxWidth / zoom, maxHeight / zoom),
                             LocalBackDispatcher provides backDispatcher,
                             LocalUiCommands provides uiCommands,
+                            LocalSpectrum provides graph.output::currentSpectrum,
                         ) {
                             AppContent(graph)
                         }

@@ -35,6 +35,15 @@ class AudioOutput {
     @Volatile
     var effects: List<String> = emptyList()
 
+    val spectrum = Spectrum()
+
+    /** Bands for what the speakers are playing right now; false when silent / nothing matches. */
+    fun currentSpectrum(into: FloatArray): Boolean {
+        val l = line ?: return false
+        if (!l.isOpen || !l.isActive) return false
+        return spectrum.at(l.longFramePosition, into)
+    }
+
     @Synchronized
     fun acquire(preferredRate: Int): Pair<SourceDataLine, Int> {
         val current = line
@@ -65,11 +74,13 @@ class AudioOutput {
 
     @Synchronized
     fun flush() {
+        spectrum.clear()
         line?.let { runCatching { it.flush() } }
     }
 
     @Synchronized
     fun close() {
+        spectrum.clear()
         line?.let {
             runCatching { it.stop() }
             runCatching { it.close() }
