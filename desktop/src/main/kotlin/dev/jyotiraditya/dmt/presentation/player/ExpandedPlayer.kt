@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -223,19 +224,39 @@ private fun LandscapePlayer(
                 .weight(1f)
                 .fillMaxHeight(),
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                ControlsBlock(
-                    state = state,
-                    dispatch = dispatch,
-                    showLyrics = showLyrics,
-                    onToggleLyrics = onToggleLyrics,
-                )
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                // tall windows (big desktop screens) have room under the controls: show the
+                // queue right there instead of leaving the column half empty
+                val roomy = maxHeight > 560.dp && state.queue.size > 1
+                Column(modifier = Modifier.fillMaxSize().padding(top = 12.dp)) {
+                    Column(
+                        modifier = if (roomy) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                        },
+                    ) {
+                        ControlsBlock(
+                            state = state,
+                            dispatch = dispatch,
+                            showLyrics = showLyrics,
+                            onToggleLyrics = onToggleLyrics,
+                        )
+                    }
+                    if (roomy) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SheetHeader(
+                            title = stringResource(Res.string.queue_title),
+                            meta = "${(state.queuePosition + 1).coerceAtLeast(1)}/${state.queue.size}",
+                        )
+                        QueueList(
+                            state = state,
+                            dispatch = dispatch,
+                            followCurrent = true,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

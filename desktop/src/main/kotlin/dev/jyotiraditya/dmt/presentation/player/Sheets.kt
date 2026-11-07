@@ -118,8 +118,15 @@ fun QueueList(
     state: DmtState,
     dispatch: (DmtAction) -> Unit,
     modifier: Modifier = Modifier,
+    followCurrent: Boolean = false,
 ) {
-    LazyColumn(modifier = modifier) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    if (followCurrent) {
+        androidx.compose.runtime.LaunchedEffect(state.queuePosition) {
+            if (state.queuePosition >= 0) listState.animateScrollToItem((state.queuePosition - 1).coerceAtLeast(0))
+        }
+    }
+    LazyColumn(state = listState, modifier = modifier) {
         itemsIndexed(state.queue) { position, entry ->
             val current = entry.index == state.queueIndex
             Row(
