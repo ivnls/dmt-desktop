@@ -1,0 +1,98 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ "v*" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test
+
+  linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # temurin is linked against an old glibc, so the bundled runtime also runs on debian 12 / older fedora
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: tools for deb + rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+      - name: version
+        id: v
+        shell: bash
+        run: |
+          # tag v1.2.3 -> 1.2.3, anything else -> the default in desktop/build.gradle.kts
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else
+            v=$(sed -n 's/.*?: "\([0-9][0-9.]*\)".*/\1/p' desktop/build.gradle.kts | head -1); fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: deb, rpm, tar.gz
+        run: ./gradlew :desktop:linuxPackages -PversionOverride=${{ steps.v.outputs.version }} -Pdmt.javaHome="$JAVA_HOME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmt-linux-x64
+          path: desktop/build/dist/*
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: version
+        id: v
+        shell: bash
+        run: |
+          # tag v1.2.3 -> 1.2.3, anything else -> the default in desktop/build.gradle.kts
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else
+            v=$(sed -n 's/.*?: "\([0-9][0-9.]*\)".*/\1/p' desktop/build.gradle.kts | head -1); fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: msi, exe and portable app image
+        run: ./gradlew :desktop:packageReleaseMsi :desktop:packageReleaseExe :desktop:createReleaseDistributable "-PversionOverride=${{ steps.v.outputs.version }}"
+      - name: collect
+        shell: pwsh
+        run: |
+          $v = "${{ steps.v.outputs.version }}"
+          New-Item -ItemType Directory -Force out | Out-Null
+          Get-ChildItem desktop/build/compose/binaries/main-release -Recurse -Include *.msi,*.exe -File |
+            Where-Object { $_.DirectoryName -notmatch '\\app\\' } |
+            ForEach-Object { Copy-Item $_.FullName ("out/dmt-$v-windows-x64" + $_.Extension) }
+          Compress-Archive -Path desktop/build/compose/binaries/main-release/app/dmt -DestinationPath "out/dmt-$v-windows-x64-portable.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmt-windows-x64
+          path: out/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ linux, windows ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

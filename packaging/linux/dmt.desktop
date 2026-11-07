@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=dmt
+GenericName=Music Player
+Comment=dear music, thanks. a tui-inspired music player.
+Exec=dmt
+Icon=dmt
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;player;audio;flac;jellyfin;lyrics;
+StartupWMClass=dmt
+StartupNotify=true
