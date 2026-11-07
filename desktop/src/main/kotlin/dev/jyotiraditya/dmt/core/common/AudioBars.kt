@@ -11,11 +11,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import dev.jyotiraditya.dmt.playback.SPECTRUM_BANDS
 import kotlin.math.max
 import kotlin.math.min
@@ -67,25 +66,29 @@ fun AudioBars(playing: Boolean, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         frame // redraw every frame
         val n = SPECTRUM_BANDS
-        val gap = min(4f, size.width / n * 0.35f)
-        val barW = (size.width - gap * (n - 1)) / n
+        // each bar is a stack of underlines: "_" rows with a gap between them
+        val gapX = min(5f, size.width / n * 0.3f)
+        val barW = (size.width - gapX * (n - 1)) / n
         if (barW <= 0f) return@Canvas
-        val brush = Brush.verticalGradient(
-            0f to BarTop,
-            0.45f to BarMid,
-            1f to BarLow,
-            startY = 0f,
-            endY = size.height,
-        )
-        val radius = CornerRadius(min(barW / 2, 2f))
+        val line = max(1.5f, size.height / 22f)
+        val step = line * 2.2f
+        val rows = max(1, ((size.height + (step - line)) / step).toInt())
         for (i in 0 until n) {
-            val h = max(MIN_BAR, shown[i]) * size.height
-            drawRoundRect(
-                brush = brush,
-                topLeft = Offset(i * (barW + gap), size.height - h),
-                size = Size(barW, h),
-                cornerRadius = radius,
-            )
+            val lit = max(1, (max(MIN_BAR, shown[i]) * rows + 0.5f).toInt()).coerceAtMost(rows)
+            val x = i * (barW + gapX)
+            for (r in 0 until lit) {
+                val y = size.height - line - r * step
+                val t = if (rows <= 1) 0f else r / (rows - 1f)
+                drawRect(
+                    color = gradientAt(t),
+                    topLeft = Offset(x, y),
+                    size = Size(barW, line),
+                )
+            }
         }
     }
 }
+
+/** amber at the base -> light gold at the top */
+private fun gradientAt(t: Float): Color =
+    if (t < 0.55f) lerp(BarLow, BarMid, t / 0.55f) else lerp(BarMid, BarTop, (t - 0.55f) / 0.45f)
