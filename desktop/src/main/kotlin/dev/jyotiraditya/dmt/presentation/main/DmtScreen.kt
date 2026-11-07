@@ -1,6 +1,8 @@
 package dev.jyotiraditya.dmt.presentation.main
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.runtime.CompositionLocalProvider
+import dev.jyotiraditya.dmt.presentation.player.LocalTrackArt
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import dev.jyotiraditya.dmt.core.common.BackHandler
@@ -283,6 +285,7 @@ fun DmtScreen(
             backAction?.let(dispatch)
         }
 
+        CompositionLocalProvider(LocalTrackArt provides art) {
         PlayerSheet(
             state = state,
             dispatch = dispatch,
@@ -292,6 +295,7 @@ fun DmtScreen(
             onInfo = { showInfoSheet = true },
             onQueue = { showQueueSheet = true },
         )
+        }
 
         if (showQueueSheet) {
             TuiSheet(onDismiss = { showQueueSheet = false }) {

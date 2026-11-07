@@ -52,6 +52,7 @@ fun nextUiScale(current: Int, step: Int): Int {
     return UI_SCALE_STEPS[(index + step).coerceIn(0, UI_SCALE_STEPS.lastIndex)]
 }
 private const val HOME_ART_COLS = 48
+private const val UP_NEXT_COUNT = 3
 private const val HOME_ART_CACHE_ENTRIES = 256
 
 private data class FilteredLibrary(
@@ -392,9 +393,11 @@ class PlayerViewModel(
 
     private val listener = object : PlayerListener {
         override fun onMediaItemTransition(track: Track?) {
+            val next = controller?.let(::upNextOf).orEmpty()
             reduce {
                 it.copy(
                     nowPlayingId = track?.id?.toString(),
+                    upNext = next,
                     title = track?.title ?: "unknown",
                     artist = track?.artist ?: "unknown artist",
                     album = track?.album.orEmpty(),
@@ -425,10 +428,12 @@ class PlayerViewModel(
                     )
                 }
             }
+            syncUpNext()
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
             reduce { it.copy(repeat = repeatMode) }
+            syncUpNext()
         }
 
         override fun onPlaybackSpeedChanged(speed: Float) {
@@ -440,6 +445,7 @@ class PlayerViewModel(
                 val (queue, queuePosition) = c.queueWithPosition()
                 reduce { it.copy(queue = queue, queuePosition = queuePosition) }
             }
+            syncUpNext()
         }
 
         override fun onUnsupported() {
@@ -462,6 +468,22 @@ class PlayerViewModel(
         }
     }
 
+    private fun upNextOf(c: Player): List<Track> {
+        val order = c.order
+        val p = order.indexOf(c.currentMediaItemIndex)
+        if (p < 0) return emptyList()
+        val after = order.drop(p + 1).let {
+            if (c.repeatMode == dev.jyotiraditya.dmt.playback.RepeatMode.ALL) it + order.take(p) else it
+        }
+        return after.take(UP_NEXT_COUNT).mapNotNull { c.queue.getOrNull(it) }
+    }
+
+    private fun syncUpNext() {
+        val c = controller ?: return
+        val next = upNextOf(c)
+        reduce { if (it.upNext == next) it else it.copy(upNext = next) }
+    }
+
     private fun syncFrom(c: Player) {
         val (queue, queuePosition) = c.queueWithPosition()
         val track = c.currentTrack
@@ -477,6 +499,7 @@ class PlayerViewModel(
                 speed = c.playbackSpeed,
                 queue = queue,
                 queuePosition = queuePosition,
+                upNext = upNextOf(c),
             )
         }
     }
@@ -632,7 +655,7 @@ class PlayerViewModel(
             }
             val rawBitmap = raw?.let { runCatching { it.toComposeImageBitmap() }.getOrNull() }
             reduce {
-                if (it.nowPlayingId != forId) it else it.copy(cover = cover, artRaw = rawBitmap)
+                if (it.nowPlayingId != forId) it else it.copy(cover = cover, artRaw = rawBitmap, coverId = forId)
             }
         }
     }

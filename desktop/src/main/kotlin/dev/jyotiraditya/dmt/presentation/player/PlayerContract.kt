@@ -51,6 +51,10 @@ data class DmtState(
     val queuePosition: Int = 0,
     val album: String = "",
     val cover: ImageBitmap? = null,
+    /** nowPlayingId the [cover] / [artRaw] were made for (they lag behind a track change) */
+    val coverId: String? = null,
+    /** the next few tracks in play order, for the cover stack */
+    val upNext: List<Track> = emptyList(),
     val artRaw: ImageBitmap? = null,
     val lyrics: Lyrics? = null,
     val lyricsFetching: Boolean = false,

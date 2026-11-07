@@ -168,14 +168,11 @@ private fun PortraitPlayer(
                     .padding(top = 14.dp)
                     .fillMaxWidth(),
             ) {
-                val lyricsShown = showLyrics && state.lyrics != null
+                // the cover stack fills the whole slot: square cover on top, the next tracks
+                // peeking out underneath it
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = if (lyricsShown) {
-                        Modifier.fillMaxSize()
-                    } else {
-                        Modifier.aspectRatio(1f)
-                    },
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     ArtSlot(state, dispatch, showLyrics)
                 }
@@ -365,15 +362,15 @@ private fun ArtSlot(
             modifier = modifier,
         )
     } else {
-        CoverPanel(state, modifier)
+        CoverStack(state = state, modifier = modifier) { CoverPanel(state, coverModifier = it) }
     }
 }
 
 @Composable
-private fun CoverPanel(state: DmtState, modifier: Modifier = Modifier) {
+private fun CoverPanel(state: DmtState, modifier: Modifier = Modifier, coverModifier: Modifier = Modifier) {
     val rawArt = state.artRaw
 
-    TuiPanel(modifier = modifier) {
+    TuiPanel(modifier = modifier.then(coverModifier)) {
         when {
             state.settings.rawArt && rawArt != null -> {
                 val image = rawArt

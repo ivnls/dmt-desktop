@@ -23,6 +23,8 @@ every package bundles its own java runtime, ffmpeg and skia: nothing else to ins
 
 - the android `metadata` and `lyrics` modules, unchanged (tags for mp3/flac/m4a/ogg, lrc + ttml
   parsing, writing lyrics back into files)
+- cover stack in the full player: the next tracks of the queue peek out under the cover, each
+  one darker; on a track change the stack rises
 - all screens: home shelves, library tabs (tracks, albums, artists, folders, playlists), search,
   sources, cfg, stats, blocklist, first-run setup, mini player, full player with landscape layout,
   karaoke lyrics, queue and track info / chain sheets
