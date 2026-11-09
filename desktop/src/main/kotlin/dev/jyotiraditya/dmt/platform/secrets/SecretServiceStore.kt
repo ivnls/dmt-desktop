@@ -17,6 +17,8 @@ private const val BUS = "org.freedesktop.secrets"
 private const val SERVICE_PATH = "/org/freedesktop/secrets"
 private const val NO_PROMPT = "/"
 private const val PROMPT_TIMEOUT_S = 120L
+private const val APP = "tmpl"
+private const val LEGACY_APP = "dmt"
 
 class SecretValue(
     @field:Position(0) val session: DBusPath,
@@ -74,7 +76,7 @@ interface SecretPrompt : DBusInterface {
 
 /**
  * Freedesktop Secret Service client (gnome keyring, kwallet 5.97+, keepassxc). Items are
- * stored with attributes application=dmt, key=<key>. A locked keyring triggers the desktop's
+ * stored with attributes application=tmpl, key=<key>. A locked keyring triggers the desktop's
  * own unlock prompt.
  */
 class SecretServiceStore private constructor(private val connection: DBusConnection) : SecretStore {
@@ -86,11 +88,19 @@ class SecretServiceStore private constructor(private val connection: DBusConnect
 
     private val session: DBusPath by lazy { service.OpenSession("plain", Variant("")).result }
 
-    private fun attributes(key: String) = mapOf("application" to "dmt", "key" to key)
+    private fun attributes(key: String, app: String = APP) = mapOf("application" to app, "key" to key)
 
     @Synchronized
     override fun get(key: String): String? {
-        val found = service.SearchItems(attributes(key))
+        read(attributes(key))?.let { return it }
+        // saved before the rename (application=dmt): move it under tmpl
+        val legacy = read(attributes(key, LEGACY_APP)) ?: return null
+        if (put(key, legacy)) deleteMatching(attributes(key, LEGACY_APP))
+        return legacy
+    }
+
+    private fun read(attributes: Map<String, String>): String? {
+        val found = service.SearchItems(attributes)
         val items = found.unlocked + unlock(found.locked)
         val path = items.firstOrNull() ?: return null
         val item = connection.getRemoteObject(BUS, path.path, SecretItem::class.java)
@@ -104,18 +114,23 @@ class SecretServiceStore private constructor(private val connection: DBusConnect
         unlock(listOf(alias))
         val collection = connection.getRemoteObject(BUS, alias.path, SecretCollection::class.java)
         val props = mapOf<String, Variant<*>>(
-            "org.freedesktop.Secret.Item.Label" to Variant("dmt: $key"),
+            "org.freedesktop.Secret.Item.Label" to Variant("tmpl: $key"),
             "org.freedesktop.Secret.Item.Attributes" to Variant(attributes(key), "a{ss}"),
         )
         val secret = SecretValue(session, ByteArray(0), value.toByteArray(Charsets.UTF_8), "text/plain; charset=utf8")
         val result = collection.CreateItem(props, secret, true)
         if (result.prompt.path != NO_PROMPT && !prompt(result.prompt)) return false
-        return get(key) == value
+        return read(attributes(key)) == value
     }
 
     @Synchronized
     override fun delete(key: String) {
-        val found = service.SearchItems(attributes(key))
+        deleteMatching(attributes(key))
+        deleteMatching(attributes(key, LEGACY_APP))
+    }
+
+    private fun deleteMatching(attributes: Map<String, String>) {
+        val found = service.SearchItems(attributes)
         (found.unlocked + unlock(found.locked)).forEach { path ->
             val item = connection.getRemoteObject(BUS, path.path, SecretItem::class.java)
             val p = item.Delete()

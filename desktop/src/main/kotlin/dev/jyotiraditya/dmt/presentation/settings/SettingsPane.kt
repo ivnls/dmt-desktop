@@ -206,30 +206,37 @@ fun SettingsPane(state: DmtState, dispatch: (DmtAction) -> Unit) {
             modifier = Modifier.padding(top = 6.dp),
         )
 
-        val uriHandler = LocalUriHandler.current
-        val creditUrl = stringResource(Res.string.credit_url)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(top = 16.dp, bottom = 12.dp)
-                .tuiClickable { runCatching { uriHandler.openUri(creditUrl) } },
-        ) {
-            Text(
-                text = "▌ ",
-                style = MaterialTheme.typography.labelMedium,
-                color = TuiAccent,
-            )
-            Text(
-                text = stringResource(Res.string.credit),
-                style = MaterialTheme.typography.labelMedium,
-                color = TuiDim,
-            )
-            Text(
-                text = " ↗",
-                style = MaterialTheme.typography.labelMedium,
-                color = TuiAccent,
-            )
+        Column(modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)) {
+            CreditRow(stringResource(Res.string.credit), stringResource(Res.string.credit_url))
+            CreditRow(stringResource(Res.string.credit_original), stringResource(Res.string.credit_original_url))
         }
+    }
+}
+
+@Composable
+private fun CreditRow(text: String, url: String) {
+    val uriHandler = LocalUriHandler.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(vertical = 3.dp)
+            .tuiClickable { runCatching { uriHandler.openUri(url) } },
+    ) {
+        Text(
+            text = "▌ ",
+            style = MaterialTheme.typography.labelMedium,
+            color = TuiAccent,
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = TuiDim,
+        )
+        Text(
+            text = " ↗",
+            style = MaterialTheme.typography.labelMedium,
+            color = TuiAccent,
+        )
     }
 }
 

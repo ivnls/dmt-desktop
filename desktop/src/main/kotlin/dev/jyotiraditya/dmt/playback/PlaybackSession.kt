@@ -44,7 +44,7 @@ class PlaybackSession(
     private val previous: PlaybackSession?,
 ) {
     private val lock = Object()
-    private val thread = Thread(::run, "dmt-decoder").apply { isDaemon = true }
+    private val thread = Thread(::run, "tmpl-decoder").apply { isDaemon = true }
 
     @Volatile private var stopped = false
     @Volatile private var playing = playWhenReady

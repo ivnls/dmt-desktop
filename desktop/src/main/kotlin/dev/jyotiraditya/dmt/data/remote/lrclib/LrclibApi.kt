@@ -11,7 +11,7 @@ import org.json.JSONObject
 
 private const val BASE_URL = "https://lrclib.net/api/get"
 private val USER_AGENT =
-    "dmt-desktop v${Platform.version} (https://github.com/imjyotiraditya/dmt)"
+    "tmpl v${Platform.version} (https://github.com/ivnls/dmt-desktop)"
 
 private fun known(value: String, placeholder: String): String? =
     value.takeIf { it.isNotBlank() && it != placeholder }

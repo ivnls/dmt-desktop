@@ -1,0 +1,125 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
+}
+
+val appVersionName = (project.findProperty("versionOverride") as String?) ?: "1.0"
+val abiSplits = (project.findProperty("abiSplits") as String?)?.toBoolean() ?: true
+val appVersionCode =
+    appVersionName
+        .substringBefore("-")
+        .split(".")
+        .mapNotNull { it.toIntOrNull() }
+        .let {
+            (it.getOrElse(0) { 0 } * 10_000) + (it.getOrElse(1) { 0 } * 100) + it.getOrElse(2) { 0 }
+        }.coerceAtLeast(1)
+
+val keystoreProps: Properties? =
+    rootProject
+        .file("keystore.properties")
+        .takeIf { it.exists() }
+        ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+
+fun signingValue(propertyKey: String, envKey: String): String? =
+    keystoreProps?.getProperty(propertyKey) ?: System.getenv(envKey)
+
+base {
+    archivesName.set("tmpl-$appVersionName")
+}
+
+android {
+    namespace = "dev.jyotiraditya.dmt"
+    compileSdk {
+        version = release(37)
+    }
+
+    defaultConfig {
+        // own id so tmpl installs next to the original dmt instead of clashing with it
+        applicationId = "dev.ivnls.tmpl"
+        minSdk = 30
+        targetSdk = 37
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    splits {
+        abi {
+            isEnable = abiSplits
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            val storePath = signingValue("storeFile", "SIGNING_KEYSTORE_PATH")
+            if (storePath != null && rootProject.file(storePath).exists()) {
+                storeFile = rootProject.file(storePath)
+                storePassword = signingValue("storePassword", "SIGNING_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "SIGNING_KEY_ALIAS") ?: "tmpl"
+                keyPassword = signingValue("keyPassword", "SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            optimization {
+                enable = true
+            }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // without a release key (no SIGNING_* secrets), -PdebugSignedRelease=true still gives an
+            // installable apk, signed with the debug key; updates then need the same machine's key
+            signingConfig =
+                signingConfigs
+                    .getByName("release")
+                    .takeIf { it.storeFile != null }
+                    ?: signingConfigs.getByName("debug")
+                        .takeIf { (project.findProperty("debugSignedRelease") as String?)?.toBoolean() == true }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+}
+
+dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(project(":metadata"))
+    implementation(project(":lyrics"))
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.exoplayer.midi)
+    implementation(files("libs/media3-decoder-ffmpeg-1.10.1.aar"))
+    implementation(libs.kotlinx.coroutines.guava)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.hilt.android)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.coil)
+    implementation(libs.coil.network.ktor3)
+    implementation(libs.androidx.profileinstaller)
+    ksp(libs.hilt.compiler)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+}

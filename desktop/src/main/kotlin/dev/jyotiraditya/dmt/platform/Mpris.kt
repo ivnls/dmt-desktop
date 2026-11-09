@@ -25,7 +25,7 @@ import org.jetbrains.skia.EncodedImageFormat
 import java.io.File
 import kotlin.math.abs
 
-private const val BUS_NAME = "org.mpris.MediaPlayer2.dmt"
+private const val BUS_NAME = "org.mpris.MediaPlayer2.tmpl"
 private const val OBJECT_PATH = "/org/mpris/MediaPlayer2"
 private const val ROOT_IFACE = "org.mpris.MediaPlayer2"
 private const val PLAYER_IFACE = "org.mpris.MediaPlayer2.Player"
@@ -162,7 +162,7 @@ class Mpris private constructor(
     }
 
     private fun trackPath(s: DmtState): DBusPath =
-        DBusPath(s.nowPlayingId?.let { "/dev/jyotiraditya/dmt/track/${it.replace('-', '_')}" } ?: "/org/mpris/MediaPlayer2/TrackList/NoTrack")
+        DBusPath(s.nowPlayingId?.let { "/dev/ivnls/tmpl/track/${it.replace('-', '_')}" } ?: "/org/mpris/MediaPlayer2/TrackList/NoTrack")
 
     private fun metadata(s: DmtState): Map<String, Variant<*>> {
         if (s.nowPlayingId == null) return mapOf("mpris:trackid" to Variant(trackPath(s)))
@@ -180,8 +180,8 @@ class Mpris private constructor(
         "CanQuit" to Variant(true),
         "CanRaise" to Variant(true),
         "HasTrackList" to Variant(false),
-        "Identity" to Variant("dmt"),
-        "DesktopEntry" to Variant("dmt"),
+        "Identity" to Variant("tmpl"),
+        "DesktopEntry" to Variant("tmpl"),
         "SupportedUriSchemes" to Variant(listOf("file"), "as"),
         "SupportedMimeTypes" to Variant(listOf("audio/mpeg", "audio/flac", "audio/ogg", "audio/mp4"), "as"),
     )
@@ -298,7 +298,7 @@ class Mpris private constructor(
                 val connection = DBusConnectionBuilder.forSessionBus().withShared(false).build()
                 Mpris(connection, graph, onRaise, onQuit).also { it.start() }
             }.onFailure {
-                System.err.println("dmt: mpris unavailable (${it.message})")
+                System.err.println("tmpl: mpris unavailable (${it.message})")
             }.getOrNull()
         }
     }

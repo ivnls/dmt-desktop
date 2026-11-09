@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "dmt-desktop"
+rootProject.name = "tmpl"
 include(":desktop")
 include(":metadata")
 include(":lyrics")

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">dmt</string>
+    <string name="app_name" translatable="false">tmpl</string>
 
     <string name="tab_library">1:tracks</string>
     <string name="tab_albums">2:albums</string>
@@ -34,7 +34,7 @@
     <string name="setup_step_ready">ready</string>
     <string name="setup_hello_tagline">dear music, thanks.</string>
     <string name="setup_hello_body">a player for the music already sitting on this computer. no account, no ads, nothing phoning home. four short steps and you are in.</string>
-    <string name="setup_access_body">tell dmt where your music lives. add as many folders as you like.</string>
+    <string name="setup_access_body">tell tmpl where your music lives. add as many folders as you like.</string>
     <string name="setup_access_required">without a music folder the shelves stay empty. you can add one later from cfg.</string>
     <string name="setup_source_body">where does the music come from? switch any time from src.</string>
     <string name="setup_source_local_why">files already stored on this computer</string>
@@ -134,7 +134,7 @@
     <string name="set_stop_on_dismiss">stop on app close</string>
     <string name="set_raw">raw artwork</string>
     <string name="lyrics_files_needed">all files access needed</string>
-    <string name="lyrics_files_why">dmt reads .lrc and .ttml files next to songs.</string>
+    <string name="lyrics_files_why">tmpl reads .lrc and .ttml files next to songs.</string>
     <string name="set_lyrics_source">lyrics source</string>
     <string name="lyrics_source_tag">tag first</string>
     <string name="lyrics_source_file">file first</string>
@@ -190,10 +190,12 @@
     <string name="stat_folders">folders</string>
     <string name="stat_empty">nothing played yet</string>
     <string name="about">about</string>
-    <string name="about_title">dmt · dear music, thanks</string>
-    <string name="about_body">a tui-inspired local music player.\nmusic helped a lot; this is the thank-you note.\ndesktop port for linux and windows.</string>
-    <string name="credit">made by jyotiraditya panda</string>
-    <string name="credit_url" translatable="false">https://github.com/imjyotiraditya</string>
+    <string name="about_title">tmpl · tui-inspired music player</string>
+    <string name="about_body">a tui-inspired local music player for linux, windows and android.\nbased on dmt - dear music, thanks.</string>
+    <string name="credit">developed by ivnls</string>
+    <string name="credit_url" translatable="false">https://github.com/ivnls</string>
+    <string name="credit_original">based on dmt by jyotiraditya panda</string>
+    <string name="credit_original_url" translatable="false">https://github.com/imjyotiraditya/dmt</string>
 
 
     <string name="info_title">title</string>
@@ -226,14 +228,14 @@
     <string name="folders_add">[ add folder ]</string>
     <string name="folders_remove">[ remove ]</string>
     <string name="folders_empty">no music folders yet</string>
-    <string name="folders_hint">dmt scans these folders (and everything inside) for audio, cue sheets and lyrics</string>
+    <string name="folders_hint">tmpl scans these folders (and everything inside) for audio, cue sheets and lyrics</string>
     <string name="folders_pick">choose a music folder</string>
     <string name="folder_missing">folder not found</string>
     <plurals name="folders_count">
         <item quantity="one">%1$d folder</item>
         <item quantity="other">%1$d folders</item>
     </plurals>
-    <string name="tray_show">show dmt</string>
+    <string name="tray_show">show tmpl</string>
     <string name="tray_play_pause">play / pause</string>
     <string name="tray_next">next</string>
     <string name="tray_prev">previous</string>

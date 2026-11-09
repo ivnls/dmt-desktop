@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>dev.jyotiraditya.dmt</id>
-  <name>dmt</name>
-  <summary>dear music, thanks. a tui-inspired music player.</summary>
+  <id>dev.ivnls.tmpl</id>
+  <name>tmpl</name>
+  <summary>tui-inspired music player, based on dmt</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <launchable type="desktop-id">dmt.desktop</launchable>
+  <launchable type="desktop-id">tmpl.desktop</launchable>
   <description>
     <p>Terminal look, amber on black, cover art as ascii. Plays local files or your own
     Jellyfin server, with bundled ffmpeg decoders, synced lyrics (lrc and ttml), cue sheets,
     replay gain and listening stats.</p>
+    <p>Developed by ivnls, based on dmt by Jyotiraditya Panda (https://github.com/imjyotiraditya/dmt).</p>
   </description>
-  <url type="homepage">https://github.com/imjyotiraditya/dmt</url>
+  <developer id="io.github.ivnls">
+    <name>ivnls</name>
+  </developer>
+  <url type="homepage">https://github.com/ivnls/dmt-desktop</url>
+  <url type="vcs-browser">https://github.com/ivnls/dmt-desktop</url>
   <content_rating type="oars-1.1"/>
 </component>

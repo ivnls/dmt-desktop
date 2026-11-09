@@ -10,12 +10,16 @@ object Platform {
 
     val version: String by lazy {
         runCatching {
-            Platform::class.java.getResourceAsStream("/dmt.properties")?.use { stream ->
+            Platform::class.java.getResourceAsStream("/tmpl.properties")?.use { stream ->
                 java.util.Properties().apply { load(stream) }.getProperty("version")
             }
         }.getOrNull()?.takeIf { it.isNotBlank() && !it.startsWith("$") } ?: "dev"
     }
 }
+
+private const val APP = "tmpl"
+/** the project was called dmt before; its folders are migrated once */
+private const val LEGACY_APP = "dmt"
 
 /** Per-OS locations for config, cache and data (XDG on linux, %APPDATA% on windows). */
 object AppDirs {
@@ -26,26 +30,41 @@ object AppDirs {
 
     val config: File by lazy {
         when {
-            Platform.isWindows -> File(env("APPDATA") ?: File(home, "AppData/Roaming"), "dmt")
-            Platform.isMac -> File(home, "Library/Application Support/dmt")
-            else -> File(env("XDG_CONFIG_HOME") ?: File(home, ".config"), "dmt")
-        }.apply { mkdirs() }
+            Platform.isWindows -> File(env("APPDATA") ?: File(home, "AppData/Roaming"), APP)
+            Platform.isMac -> File(home, "Library/Application Support/$APP")
+            else -> File(env("XDG_CONFIG_HOME") ?: File(home, ".config"), APP)
+        }.also(::migrateLegacy).apply { mkdirs() }
     }
 
     val data: File by lazy {
         when {
-            Platform.isWindows -> File(env("APPDATA") ?: File(home, "AppData/Roaming"), "dmt")
-            Platform.isMac -> File(home, "Library/Application Support/dmt")
-            else -> File(env("XDG_DATA_HOME") ?: File(home, ".local/share"), "dmt")
-        }.apply { mkdirs() }
+            Platform.isWindows -> File(env("APPDATA") ?: File(home, "AppData/Roaming"), APP)
+            Platform.isMac -> File(home, "Library/Application Support/$APP")
+            else -> File(env("XDG_DATA_HOME") ?: File(home, ".local/share"), APP)
+        }.also(::migrateLegacy).apply { mkdirs() }
     }
 
     val cache: File by lazy {
         when {
-            Platform.isWindows -> File(env("LOCALAPPDATA") ?: File(home, "AppData/Local"), "dmt/cache")
-            Platform.isMac -> File(home, "Library/Caches/dmt")
-            else -> File(env("XDG_CACHE_HOME") ?: File(home, ".cache"), "dmt")
+            Platform.isWindows -> File(env("LOCALAPPDATA") ?: File(home, "AppData/Local"), "$APP/cache")
+            Platform.isMac -> File(home, "Library/Caches/$APP")
+            else -> File(env("XDG_CACHE_HOME") ?: File(home, ".cache"), APP)
         }.apply { mkdirs() }
+    }
+
+    /**
+     * First start after the rename: copy the old dmt folder (settings, playlists, secrets file)
+     * to the new tmpl one. The old folder is left in place.
+     */
+    private fun migrateLegacy(target: File) {
+        if (target.exists()) return
+        val legacy = File(target.parentFile, if (target.name == APP) LEGACY_APP else return)
+        if (!legacy.isDirectory) return
+        runCatching {
+            legacy.copyRecursively(target, overwrite = false)
+            File(target, "$LEGACY_APP.properties").takeIf { it.isFile }
+                ?.renameTo(File(target, "$APP.properties"))
+        }
     }
 
     val playlists: File

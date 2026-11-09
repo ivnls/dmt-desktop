@@ -19,7 +19,7 @@ import java.util.Properties
  * Tiny replacement for androidx datastore-preferences: a properties file with a
  * StateFlow in front of it. Values are stored as strings and typed by [Key].
  */
-class DmtStore(private val file: File = File(AppDirs.config, "dmt.properties")) {
+class DmtStore(private val file: File = File(AppDirs.config, "tmpl.properties")) {
 
     private val mutex = Mutex()
     private val _data = MutableStateFlow(load())
@@ -50,7 +50,7 @@ class DmtStore(private val file: File = File(AppDirs.config, "dmt.properties")) 
             tmp.createNewFile()
             restrictFile(tmp)
             val props = Properties().apply { prefs.values.forEach { (k, v) -> setProperty(k, v) } }
-            tmp.outputStream().use { props.store(it, "dmt") }
+            tmp.outputStream().use { props.store(it, "tmpl") }
             Files.move(
                 tmp.toPath(),
                 file.toPath(),
@@ -61,7 +61,7 @@ class DmtStore(private val file: File = File(AppDirs.config, "dmt.properties")) 
         }.onFailure {
             runCatching {
                 val props = Properties().apply { prefs.values.forEach { (k, v) -> setProperty(k, v) } }
-                file.outputStream().use { props.store(it, "dmt") }
+                file.outputStream().use { props.store(it, "tmpl") }
             }
         }
     }

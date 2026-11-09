@@ -36,10 +36,10 @@ data class JellyfinItem(
     val dateAdded: Long,
 )
 
-private const val CLIENT_NAME = "DMT"
+private const val CLIENT_NAME = "tmpl"
 private val CLIENT_VERSION = dev.jyotiraditya.dmt.platform.Platform.version
 private val DEVICE_NAME = if (dev.jyotiraditya.dmt.platform.Platform.isWindows) "Windows" else "Linux"
-private val DEVICE_ID = "dmt-desktop-" + (runCatching { java.net.InetAddress.getLocalHost().hostName }.getOrNull() ?: "pc").lowercase()
+private val DEVICE_ID = "tmpl-" + (runCatching { java.net.InetAddress.getLocalHost().hostName }.getOrNull() ?: "pc").lowercase()
 
 private const val TICKS_PER_MS = 10_000L
 

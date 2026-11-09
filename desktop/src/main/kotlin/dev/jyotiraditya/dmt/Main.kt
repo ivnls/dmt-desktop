@@ -51,7 +51,7 @@ import dev.jyotiraditya.dmt.presentation.player.DmtAction
 import dev.jyotiraditya.dmt.presentation.player.DmtView
 import dev.jyotiraditya.dmt.presentation.player.PlayerEffect
 import dev.jyotiraditya.dmt.resources.Res
-import dev.jyotiraditya.dmt.resources.dmt
+import dev.jyotiraditya.dmt.resources.tmpl
 import dev.jyotiraditya.dmt.resources.tray_next
 import dev.jyotiraditya.dmt.resources.tray_play_pause
 import dev.jyotiraditya.dmt.resources.tray_prev
@@ -75,7 +75,7 @@ fun main() {
     val raise = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val quitRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     var mpris: Mpris? = null
-    if (Platform.isLinux && System.getenv("DMT_NO_MPRIS") == null) {
+    if (Platform.isLinux && System.getenv("TMPL_NO_MPRIS") == null) {
         Thread {
             mpris = Mpris.start(graph, onRaise = { raise.tryEmit(Unit) }, onQuit = { quitRequest.tryEmit(Unit) })
         }.apply { isDaemon = true }.start()
@@ -113,8 +113,8 @@ fun main() {
 
         if (trayOk) {
             Tray(
-                icon = painterResource(Res.drawable.dmt),
-                tooltip = if (state.nowPlayingId != null) "${state.title} · ${state.artist}" else "dmt",
+                icon = painterResource(Res.drawable.tmpl),
+                tooltip = if (state.nowPlayingId != null) "${state.title} · ${state.artist}" else "tmpl",
                 onAction = { visible = true },
                 menu = {
                     Item(stringResource(Res.string.tray_show), onClick = { visible = true })
@@ -139,8 +139,8 @@ fun main() {
             },
             visible = visible,
             state = windowState,
-            title = if (state.nowPlayingId != null && state.isPlaying) "${state.title} · ${state.artist} — dmt" else "dmt",
-            icon = painterResource(Res.drawable.dmt),
+            title = if (state.nowPlayingId != null && state.isPlaying) "${state.title} · ${state.artist} — tmpl" else "tmpl",
+            icon = painterResource(Res.drawable.tmpl),
             onPreviewKeyEvent = { event ->
                 handleShortcut(event, state.expanded, backDispatcher, uiCommands) { vm.onIntent(it) }
             },
@@ -254,13 +254,13 @@ private fun saveWindowState(graph: AppGraph, state: WindowState) {
     runCatching { runBlocking { graph.preferences.saveWindowState(value) } }
 }
 
-/** So GNOME/KDE match the window to dmt.desktop (StartupWMClass=dmt) instead of "MainKt". */
+/** So GNOME/KDE match the window to tmpl.desktop (StartupWMClass=tmpl) instead of "MainKt". */
 private fun setLinuxWmClass() {
     if (!Platform.isLinux) return
     runCatching {
         val toolkit = Toolkit.getDefaultToolkit()
         val field = toolkit.javaClass.getDeclaredField("awtAppClassName")
         field.isAccessible = true
-        field.set(toolkit, "dmt")
+        field.set(toolkit, "tmpl")
     }
 }

@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=Application
-Name=dmt
+Name=tmpl
 GenericName=Music Player
-Comment=dear music, thanks. a tui-inspired music player.
-Exec=dmt
-Icon=dmt
+Comment=tui-inspired music player, based on dmt
+Exec=tmpl
+Icon=tmpl
 Terminal=false
 Categories=AudioVideo;Audio;Player;
 Keywords=music;player;audio;flac;jellyfin;lyrics;
-StartupWMClass=dmt
+StartupWMClass=tmpl
 StartupNotify=true

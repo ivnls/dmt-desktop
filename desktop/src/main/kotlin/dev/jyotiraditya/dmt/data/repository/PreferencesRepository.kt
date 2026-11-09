@@ -68,7 +68,7 @@ class PreferencesRepository(
     }
 
     init {
-        Thread(::loadToken, "dmt-secrets").apply { isDaemon = true }.start()
+        Thread(::loadToken, "tmpl-secrets").apply { isDaemon = true }.start()
     }
 
     /**

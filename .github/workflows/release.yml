@@ -44,10 +44,10 @@ jobs:
             v=$(sed -n 's/.*?: "\([0-9][0-9.]*\)".*/\1/p' desktop/build.gradle.kts | head -1); fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - name: deb, rpm, tar.gz
-        run: ./gradlew :desktop:linuxPackages -PversionOverride=${{ steps.v.outputs.version }} -Pdmt.javaHome="$JAVA_HOME"
+        run: ./gradlew :desktop:linuxPackages -PversionOverride=${{ steps.v.outputs.version }} -Ptmpl.javaHome="$JAVA_HOME"
       - uses: actions/upload-artifact@v4
         with:
-          name: dmt-linux-x64
+          name: tmpl-linux-x64
           path: desktop/build/dist/*
 
   windows:
@@ -77,16 +77,56 @@ jobs:
           New-Item -ItemType Directory -Force out | Out-Null
           Get-ChildItem desktop/build/compose/binaries/main-release -Recurse -Include *.msi,*.exe -File |
             Where-Object { $_.DirectoryName -notmatch '\\app\\' } |
-            ForEach-Object { Copy-Item $_.FullName ("out/dmt-$v-windows-x64" + $_.Extension) }
-          Compress-Archive -Path desktop/build/compose/binaries/main-release/app/dmt -DestinationPath "out/dmt-$v-windows-x64-portable.zip"
+            ForEach-Object { Copy-Item $_.FullName ("out/tmpl-$v-windows-x64" + $_.Extension) }
+          Compress-Archive -Path desktop/build/compose/binaries/main-release/app/tmpl -DestinationPath "out/tmpl-$v-windows-x64-portable.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: dmt-windows-x64
+          name: tmpl-windows-x64
           path: out/*
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: version
+        id: v
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else
+            v=$(sed -n 's/.*?: "\([0-9][0-9.]*\)".*/\1/p' ../desktop/build.gradle.kts | head -1); fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      # release signing: repository secrets SIGNING_KEYSTORE (base64 of the .keystore),
+      # SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD. Without them the apk is
+      # signed with the runner's debug key (installs fine, but each build has a different key).
+      - name: signing key
+        env:
+          KEYSTORE: ${{ secrets.SIGNING_KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then echo "$KEYSTORE" | base64 -d > tmpl.keystore; fi
+      - name: apk
+        env:
+          SIGNING_KEYSTORE_PATH: tmpl.keystore
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease -PversionOverride=${{ steps.v.outputs.version }} -PdebugSignedRelease=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tmpl-android
+          path: android/app/build/outputs/apk/release/*.apk
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ linux, windows ]
+    needs: [ linux, windows, android ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

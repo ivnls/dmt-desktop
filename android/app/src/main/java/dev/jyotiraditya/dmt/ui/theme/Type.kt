@@ -1,0 +1,40 @@
+package dev.jyotiraditya.dmt.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import dev.jyotiraditya.dmt.R
+
+val PlexMono = FontFamily(
+    Font(R.font.plex_mono, FontWeight.Normal),
+    Font(R.font.plex_mono_medium, FontWeight.Medium),
+    Font(R.font.plex_mono_bold, FontWeight.Bold),
+    Font(R.font.plex_mono_italic, FontWeight.Normal, FontStyle.Italic),
+)
+
+private fun mono(
+    size: Int,
+    weight: FontWeight = FontWeight.Normal,
+    tracking: Float = 0f,
+) = TextStyle(
+    fontFamily = PlexMono,
+    fontSize = size.sp,
+    fontWeight = weight,
+    letterSpacing = tracking.sp,
+)
+
+val Typography = Typography(
+    headlineSmall = mono(15),
+    titleLarge = mono(21, FontWeight.Bold),
+    titleMedium = mono(15, FontWeight.Bold),
+    bodyLarge = mono(14),
+    bodyMedium = mono(13),
+    bodySmall = mono(11, tracking = 0.5f),
+    labelLarge = mono(13, FontWeight.Bold, tracking = 1f),
+    labelMedium = mono(12, tracking = 1.5f),
+    labelSmall = mono(11, FontWeight.Medium, tracking = 0.5f),
+)

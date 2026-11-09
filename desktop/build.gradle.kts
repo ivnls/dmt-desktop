@@ -10,7 +10,7 @@ plugins {
 val appVersion = (findProperty("versionOverride") as String?) ?: "1.4.0"
 
 // Which OS/arch the natives (skia + ffmpeg) are bundled for. Defaults to the host.
-// Override with -Pdmt.target=linux-x64 | linux-arm64 | windows-x64
+// Override with -Ptmpl.target=linux-x64 | linux-arm64 | windows-x64
 val hostTarget: String = run {
     val os = System.getProperty("os.name").lowercase()
     val arch = System.getProperty("os.arch").lowercase()
@@ -21,17 +21,17 @@ val hostTarget: String = run {
         else -> "linux-$a"
     }
 }
-val dmtTarget: String = (findProperty("dmt.target") as String?) ?: hostTarget
+val tmplTarget: String = (findProperty("tmpl.target") as String?) ?: hostTarget
 
-val bytedecoClassifier = when (dmtTarget) {
+val bytedecoClassifier = when (tmplTarget) {
     "linux-x64" -> "linux-x86_64"
     "linux-arm64" -> "linux-arm64"
     "windows-x64" -> "windows-x86_64"
     "macos-x64" -> "macosx-x86_64"
     "macos-arm64" -> "macosx-arm64"
-    else -> error("unknown dmt.target $dmtTarget")
+    else -> error("unknown tmpl.target $tmplTarget")
 }
-val skikoTarget = "org.jetbrains.compose.desktop:desktop-jvm-$dmtTarget:${libs.versions.compose.get()}"
+val skikoTarget = "org.jetbrains.compose.desktop:desktop-jvm-$tmplTarget:${libs.versions.compose.get()}"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -85,10 +85,10 @@ compose.desktop {
         // The JDK whose runtime gets bundled. Use a portable build (e.g. Eclipse Temurin) for
         // release packages: distro JDKs can be linked against a newer glibc than older distros
         // ship (ubuntu 24.04's openjdk needs glibc 2.38, debian 12 has 2.36).
-        ((findProperty("dmt.javaHome") as String?) ?: System.getenv("DMT_JAVA_HOME"))?.let { javaHome = it }
+        ((findProperty("tmpl.javaHome") as String?) ?: System.getenv("TMPL_JAVA_HOME"))?.let { javaHome = it }
         jvmArgs += listOf("-Xss2m", "--enable-native-access=ALL-UNNAMED")
-        // lets Main set the X11 WM_CLASS to "dmt" so docks match the window to dmt.desktop
-        if (dmtTarget.startsWith("linux")) jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
+        // lets Main set the X11 WM_CLASS to "tmpl" so docks match the window to tmpl.desktop
+        if (tmplTarget.startsWith("linux")) jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
 
         buildTypes.release.proguard {
             isEnabled.set(false)
@@ -96,18 +96,18 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Rpm, TargetFormat.Msi, TargetFormat.Exe)
-            packageName = "dmt"
+            packageName = "tmpl"
             packageVersion = appVersion
-            description = "dear music, thanks. a tui-inspired music player."
-            vendor = "dmt"
-            copyright = "GPL-3.0"
+            description = "tmpl - tui-inspired music player, based on dmt by Jyotiraditya Panda"
+            vendor = "ivnls"
+            copyright = "GPL-3.0 - ivnls, based on dmt (c) Jyotiraditya Panda"
             licenseFile.set(rootProject.file("LICENSE"))
             modules("java.desktop", "java.logging", "java.naming", "java.instrument", "java.management", "jdk.security.auth", "jdk.unsupported", "jdk.crypto.ec", "java.sql")
 
             linux {
-                iconFile.set(project.file("icons/dmt.png"))
-                packageName = "dmt"
-                debMaintainer = "dmt@localhost"
+                iconFile.set(project.file("icons/tmpl.png"))
+                packageName = "tmpl"
+                debMaintainer = "ivnls@users.noreply.github.com"
                 menuGroup = "AudioVideo;Audio;Player"
                 appCategory = "sound"
                 appRelease = "1"
@@ -115,8 +115,8 @@ compose.desktop {
                 shortcut = true
             }
             windows {
-                iconFile.set(project.file("icons/dmt.ico"))
-                menuGroup = "dmt"
+                iconFile.set(project.file("icons/tmpl.ico"))
+                menuGroup = "tmpl"
                 shortcut = true
                 dirChooser = true
                 perUserInstall = true
@@ -127,10 +127,10 @@ compose.desktop {
 }
 
 // Fat jar for any target (works cross-OS, e.g. build the windows jar on linux):
-//   ./gradlew :desktop:fatJar -Pdmt.target=windows-x64
+//   ./gradlew :desktop:fatJar -Ptmpl.target=windows-x64
 val fatJar by tasks.registering(Jar::class) {
     group = "distribution"
-    archiveBaseName.set("dmt-$dmtTarget")
+    archiveBaseName.set("tmpl-$tmplTarget")
     archiveVersion.set(appVersion)
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -152,7 +152,7 @@ val fatJar by tasks.registering(Jar::class) {
 }
 
 tasks.processResources {
-    filesMatching("dmt.properties") { expand("version" to appVersion) }
+    filesMatching("tmpl.properties") { expand("version" to appVersion) }
 }
 
 
@@ -160,9 +160,9 @@ tasks.processResources {
 tasks.register<Exec>("linuxPackages") {
     group = "distribution"
     dependsOn("createReleaseDistributable")
-    val appImage = layout.buildDirectory.dir("compose/binaries/main-release/app/dmt")
+    val appImage = layout.buildDirectory.dir("compose/binaries/main-release/app/tmpl")
     val out = layout.buildDirectory.dir("dist")
-    val arch = if (dmtTarget.endsWith("arm64")) "aarch64" else "x86_64"
+    val arch = if (tmplTarget.endsWith("arm64")) "aarch64" else "x86_64"
     commandLine(
         rootProject.file("packaging/linux/package.sh").absolutePath,
         appImage.get().asFile.absolutePath,
